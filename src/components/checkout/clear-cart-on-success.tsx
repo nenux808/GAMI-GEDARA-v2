@@ -5,12 +5,13 @@ import { useCart } from "@/components/cart/cart-context";
 
 export default function ClearCartOnSuccess() {
   const { clearCart } = useCart();
-  const clearedRef = useRef(false);
+  const hasClearedRef = useRef(false);
 
   useEffect(() => {
-    if (clearedRef.current) return;
+    if (hasClearedRef.current) return;
+
     clearCart();
-    clearedRef.current = true;
+    hasClearedRef.current = true;
   }, [clearCart]);
 
   return null;

@@ -1,3 +1,4 @@
+import DeleteMealPackOptionButton from "@/components/admin/delete-meal-pack-option-button";
 import type { MealPackMenu, MealPackOption } from "@/types/meal-pack";
 
 export default function MealPackOptionList({
@@ -47,8 +48,8 @@ export default function MealPackOptionList({
                     key={option.id}
                     className="rounded-2xl border border-slate-300 bg-slate-50 p-4"
                   >
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-bold text-slate-950">
                             {option.name}
@@ -80,13 +81,20 @@ export default function MealPackOptionList({
                         </p>
                       </div>
 
-                      <div className="text-left sm:text-right">
-                        <p className="text-sm font-medium text-slate-700">
-                          Price
-                        </p>
-                        <p className="font-extrabold text-slate-950">
-                          ${Number(option.price).toFixed(2)}
-                        </p>
+                      <div className="flex flex-col gap-3 sm:items-end">
+                        <div className="text-left sm:text-right">
+                          <p className="text-sm font-medium text-slate-700">
+                            Price
+                          </p>
+                          <p className="font-extrabold text-slate-950">
+                            ${Number(option.price).toFixed(2)}
+                          </p>
+                        </div>
+
+                        <DeleteMealPackOptionButton
+                          optionId={option.id}
+                          optionName={option.name}
+                        />
                       </div>
                     </div>
                   </div>

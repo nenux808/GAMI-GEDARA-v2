@@ -2,137 +2,144 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
-import type { CartItem } from "@/types/cart";
 
-type AddCartItemInput = Omit<CartItem, "quantity">;
+export type CartItem = {
+  id: string;
+  type: "regular" | "meal_pack";
+  name: string;
+  slug?: string;
+  price: number;
+  quantity: number;
+  image_url?: string | null;
+  selections?: string[];
+  meal_pack_menu_id?: string;
+};
 
 type CartContextType = {
   items: CartItem[];
-  addItem: (item: AddCartItemInput) => void;
-  removeItem: (id: string) => void;
+  subtotal: number;
+  addItem: (item: Omit<CartItem, "quantity">) => void;
   increaseQty: (id: string) => void;
   decreaseQty: (id: string) => void;
+  removeItem: (id: string) => void;
   clearCart: () => void;
-  itemCount: number;
-  subtotal: number;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const STORAGE_KEY = "gami-gedara-cart";
+const CART_STORAGE_KEY = "gami-gedara-cart";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
+    try {
+      const savedCart = window.localStorage.getItem(CART_STORAGE_KEY);
 
-    if (saved) {
-      try {
-        setItems(JSON.parse(saved));
-      } catch {
-        setItems([]);
+      if (savedCart) {
+        const parsed = JSON.parse(savedCart) as CartItem[];
+        setItems(Array.isArray(parsed) ? parsed : []);
       }
+    } catch (error) {
+      console.error("Failed to load cart from localStorage:", error);
+      setItems([]);
+    } finally {
+      setHydrated(true);
     }
-
-    setHydrated(true);
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+
+    try {
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+    } catch (error) {
+      console.error("Failed to save cart to localStorage:", error);
+    }
   }, [items, hydrated]);
 
-  const addItem = (item: AddCartItemInput) => {
+  const addItem = useCallback((item: Omit<CartItem, "quantity">) => {
     setItems((prev) => {
-      const existing = prev.find(
-        (p) =>
-          p.id === item.id &&
-          p.type === item.type &&
-          JSON.stringify(p.selections ?? []) ===
-            JSON.stringify(item.selections ?? [])
-      );
+      const existing = prev.find((cartItem) => cartItem.id === item.id);
 
       if (existing) {
-        return prev.map((p) =>
-          p.id === item.id &&
-          p.type === item.type &&
-          JSON.stringify(p.selections ?? []) ===
-            JSON.stringify(item.selections ?? [])
-            ? { ...p, quantity: p.quantity + 1 }
-            : p
+        return prev.map((cartItem) =>
+          cartItem.id === item.id
+            ? { ...cartItem, quantity: cartItem.quantity + 1 }
+            : cartItem
         );
       }
 
       return [...prev, { ...item, quantity: 1 }];
     });
-  };
+  }, []);
 
-  const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  const increaseQty = (id: string) => {
+  const increaseQty = useCallback((id: string) => {
     setItems((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, quantity: item.quantity + 1 } : item
       )
     );
-  };
+  }, []);
 
-  const decreaseQty = (id: string) => {
+  const decreaseQty = useCallback((id: string) => {
     setItems((prev) =>
       prev
         .map((item) =>
-          item.id === id ? { ...item, quantity: item.quantity - 1 } : item
+          item.id === id
+            ? { ...item, quantity: Math.max(0, item.quantity - 1) }
+            : item
         )
         .filter((item) => item.quantity > 0)
     );
-  };
+  }, []);
 
-  const clearCart = () => {
+  const removeItem = useCallback((id: string) => {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
+  const clearCart = useCallback(() => {
     setItems([]);
-  };
-
-  const itemCount = useMemo(
-    () => items.reduce((sum, item) => sum + item.quantity, 0),
-    [items]
-  );
+    try {
+      window.localStorage.removeItem(CART_STORAGE_KEY);
+    } catch (error) {
+      console.error("Failed to clear cart localStorage:", error);
+    }
+  }, []);
 
   const subtotal = useMemo(
     () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [items]
   );
 
-  return (
-    <CartContext.Provider
-      value={{
-        items,
-        addItem,
-        removeItem,
-        increaseQty,
-        decreaseQty,
-        clearCart,
-        itemCount,
-        subtotal,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
+  const value = useMemo(
+    () => ({
+      items,
+      subtotal,
+      addItem,
+      increaseQty,
+      decreaseQty,
+      removeItem,
+      clearCart,
+    }),
+    [items, subtotal, addItem, increaseQty, decreaseQty, removeItem, clearCart]
   );
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {
   const context = useContext(CartContext);
 
   if (!context) {
-    throw new Error("useCart must be used inside CartProvider");
+    throw new Error("useCart must be used within a CartProvider");
   }
 
   return context;
