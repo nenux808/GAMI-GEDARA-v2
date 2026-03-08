@@ -75,14 +75,14 @@ export default function SiteFooter() {
       </div>
 
       <div className="border-t border-slate-200">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-5 text-sm text-slate-500 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {year} Gami Gedara. All rights reserved.</p>
-          <p>
-            Designed & developed by{" "}
-            <span className="font-semibold text-slate-700">Nenux Web Solutions</span>
-          </p>
-        </div>
-      </div>
+  <div className="mx-auto flex max-w-7xl flex-col items-center justify-center gap-2 px-4 py-5 text-center text-sm text-slate-500 sm:px-6 sm:flex-row sm:justify-between sm:text-left">
+    <p>© {year} Gami Gedara. All rights reserved.</p>
+    <p>
+      Designed & developed by{" "}
+      <span className="font-semibold text-slate-700">Nenux Web Solutions</span>
+    </p>
+  </div>
+</div>
     </footer>
   );
 }
