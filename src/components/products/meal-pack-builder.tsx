@@ -35,8 +35,9 @@ export default function MealPackBuilder({
   const isClosed = now >= cutoffAt;
   const isOpen = !isScheduled && !isClosed && menu.is_active;
 
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const [quantity, setQuantity] = useState(1);
+  const [selectedQuantities, setSelectedQuantities] = useState<
+    Record<string, number>
+  >({});
 
   const groupedOptions = useMemo(() => {
     const groups: Record<string, MealPackOption[]> = {};
@@ -51,59 +52,70 @@ export default function MealPackBuilder({
   }, [options]);
 
   const selectedOptionObjects = useMemo(() => {
-    return options.filter((option) => selectedOptions.includes(option.name));
-  }, [options, selectedOptions]);
+    return options.filter((option) => (selectedQuantities[option.name] ?? 0) > 0);
+  }, [options, selectedQuantities]);
 
-  const selectedSubtotal = useMemo(() => {
-    return selectedOptionObjects.reduce(
-      (sum, option) => sum + Number(option.price),
-      0
-    );
-  }, [selectedOptionObjects]);
+  const totalSelectedItems = useMemo(() => {
+    return Object.values(selectedQuantities).reduce((sum, qty) => sum + qty, 0);
+  }, [selectedQuantities]);
 
   const totalPrice = useMemo(() => {
-    return selectedSubtotal * quantity;
-  }, [selectedSubtotal, quantity]);
+    return options.reduce((sum, option) => {
+      const qty = selectedQuantities[option.name] ?? 0;
+      return sum + Number(option.price) * qty;
+    }, 0);
+  }, [options, selectedQuantities]);
 
-  const toggleOption = (name: string) => {
-    setSelectedOptions((prev) =>
-      prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name]
-    );
+  const increaseOption = (name: string) => {
+    setSelectedQuantities((prev) => ({
+      ...prev,
+      [name]: (prev[name] ?? 0) + 1,
+    }));
+  };
+
+  const decreaseOption = (name: string) => {
+    setSelectedQuantities((prev) => {
+      const current = prev[name] ?? 0;
+      const next = current - 1;
+
+      if (next <= 0) {
+        const updated = { ...prev };
+        delete updated[name];
+        return updated;
+      }
+
+      return {
+        ...prev,
+        [name]: next,
+      };
+    });
   };
 
   const handleAddMealPack = () => {
     if (!isOpen) return;
 
-    if (selectedOptionObjects.length === 0) {
-      showToast("Please select at least one curry option");
+    if (totalSelectedItems === 0) {
+      showToast("Please select at least one meal pack option");
       return;
     }
 
-    const mealPackPrice = totalPrice / quantity;
+    const expandedSelections = Object.entries(selectedQuantities).flatMap(
+      ([name, qty]) => Array.from({ length: qty }, () => name)
+    );
+
+    const compactSelections = Object.entries(selectedQuantities).map(
+      ([name, qty]) => `${name} x${qty}`
+    );
 
     addItem({
-      id: `${menu.id}-${selectedOptions.join("-")}`,
+      id: `${menu.id}-${compactSelections.join("-")}`,
       type: "meal_pack",
       name: menu.title,
       slug: menu.slug,
-      price: mealPackPrice,
+      price: totalPrice,
       meal_pack_menu_id: menu.id,
-      selections: selectedOptions,
+      selections: expandedSelections,
     });
-
-    if (quantity > 1) {
-      for (let i = 1; i < quantity; i += 1) {
-        addItem({
-          id: `${menu.id}-${selectedOptions.join("-")}`,
-          type: "meal_pack",
-          name: menu.title,
-          slug: menu.slug,
-          price: mealPackPrice,
-          meal_pack_menu_id: menu.id,
-          selections: selectedOptions,
-        });
-      }
-    }
 
     showToast(`${menu.title} added to cart`);
   };
@@ -175,40 +187,60 @@ export default function MealPackBuilder({
 
               <div className="mt-3 grid gap-3">
                 {categoryOptions.map((option) => {
-                  const checked = selectedOptions.includes(option.name);
+                  const qty = selectedQuantities[option.name] ?? 0;
 
                   return (
-                    <label
+                    <div
                       key={option.id}
-                      className={`flex flex-col gap-3 rounded-2xl border p-4 transition sm:flex-row sm:items-start sm:justify-between ${
-                        checked
+                      className={`rounded-2xl border p-4 transition ${
+                        qty > 0
                           ? "border-slate-900 bg-slate-50"
                           : "border-slate-200 bg-white"
                       }`}
                     >
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleOption(option.name)}
-                          className="mt-1 h-4 w-4"
-                          disabled={!isOpen}
-                        />
-
-                        <div>
-                          <p className="font-medium text-slate-900">{option.name}</p>
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-slate-900">
+                            {option.name}
+                          </p>
                           {option.description ? (
                             <p className="mt-1 text-sm text-slate-600">
                               {option.description}
                             </p>
                           ) : null}
                         </div>
-                      </div>
 
-                      <div className="text-sm font-semibold text-slate-900 sm:pl-4">
-                        ${Number(option.price).toFixed(2)}
+                        <div className="flex flex-col gap-3 sm:items-end">
+                          <div className="text-sm font-semibold text-slate-900">
+                            ${Number(option.price).toFixed(2)}
+                          </div>
+
+                          <div className="flex w-fit items-center rounded-2xl border border-slate-300 bg-white">
+                            <button
+                              type="button"
+                              onClick={() => decreaseOption(option.name)}
+                              className="px-4 py-2 text-lg font-bold text-slate-900 disabled:text-slate-400"
+                              disabled={!isOpen || qty === 0}
+                            >
+                              -
+                            </button>
+
+                            <span className="min-w-10 text-center font-bold text-slate-900">
+                              {qty}
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => increaseOption(option.name)}
+                              className="px-4 py-2 text-lg font-bold text-slate-900 disabled:text-slate-400"
+                              disabled={!isOpen}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </label>
+                    </div>
                   );
                 })}
               </div>
@@ -221,51 +253,32 @@ export default function MealPackBuilder({
         <h2 className="text-2xl font-bold text-slate-900">Your Meal Pack</h2>
 
         <div className="mt-6">
-          <label className="text-sm font-medium text-slate-700">Quantity</label>
-
-          <div className="mt-2 flex w-fit items-center rounded-2xl border border-slate-300 bg-white">
-            <button
-              type="button"
-              onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-              className="px-4 py-2 text-lg font-bold text-slate-900 disabled:text-slate-400"
-              disabled={!isOpen}
-            >
-              -
-            </button>
-
-            <span className="min-w-10 text-center font-bold text-slate-900">
-              {quantity}
-            </span>
-
-            <button
-              type="button"
-              onClick={() => setQuantity((prev) => prev + 1)}
-              className="px-4 py-2 text-lg font-bold text-slate-900 disabled:text-slate-400"
-              disabled={!isOpen}
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <p className="text-sm font-medium text-slate-700">Selected curries</p>
+          <p className="text-sm font-medium text-slate-700">Selected options</p>
 
           {selectedOptionObjects.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">No curries selected yet.</p>
+            <p className="mt-2 text-sm text-slate-500">
+              No meal pack options selected yet.
+            </p>
           ) : (
             <ul className="mt-3 space-y-2 text-sm text-slate-700">
-              {selectedOptionObjects.map((option) => (
-                <li
-                  key={option.id}
-                  className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2"
-                >
-                  <span>{option.name}</span>
-                  <span className="font-semibold text-slate-900">
-                    ${Number(option.price).toFixed(2)}
-                  </span>
-                </li>
-              ))}
+              {selectedOptionObjects.map((option) => {
+                const qty = selectedQuantities[option.name] ?? 0;
+
+                return (
+                  <li
+                    key={option.id}
+                    className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2"
+                  >
+                    <div>
+                      <span>{option.name}</span>
+                      <span className="ml-2 text-slate-500">x{qty}</span>
+                    </div>
+                    <span className="font-semibold text-slate-900">
+                      ${(Number(option.price) * qty).toFixed(2)}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
