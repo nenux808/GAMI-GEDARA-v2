@@ -123,28 +123,64 @@ export async function POST(req: Request) {
 
     console.log("Created order ID:", order.id);
 
-    const orderItemsPayload = items.map((item) => ({
-      order_id: order.id,
-      product_id: null,
-      product_name:
+    for (const item of items) {
+      const productName =
         item.type === "meal_pack" && item.selections?.length
           ? `${item.name} | ${item.selections.join(", ")}`
-          : item.name,
-      unit_price: Number(item.price),
-      quantity: item.quantity,
-      line_total: Number(item.price) * item.quantity,
-    }));
+          : item.name;
 
-    const { error: itemsError } = await supabaseAdmin
-      .from("order_items")
-      .insert(orderItemsPayload);
+      const { data: insertedItem, error: itemError } = await supabaseAdmin
+        .from("order_items")
+        .insert({
+          order_id: order.id,
+          product_id: null,
+          product_name: productName,
+          unit_price: Number(item.price),
+          quantity: item.quantity,
+          line_total: Number(item.price) * item.quantity,
+        })
+        .select("id")
+        .single();
 
-    if (itemsError) {
-      console.error("Order items insert error:", itemsError);
-      return NextResponse.json(
-        { error: "Failed to save order items" },
-        { status: 500 }
-      );
+      if (itemError || !insertedItem) {
+        console.error("Order item insert error:", itemError);
+        return NextResponse.json(
+          { error: "Failed to save order items" },
+          { status: 500 }
+        );
+      }
+
+      if (item.type === "meal_pack" && item.selections?.length) {
+        const selectionCounts = item.selections.reduce<Record<string, number>>(
+          (acc, selection) => {
+            acc[selection] = (acc[selection] ?? 0) + item.quantity;
+            return acc;
+          },
+          {}
+        );
+
+        const selectionRows = Object.entries(selectionCounts).map(
+          ([optionName, quantity]) => ({
+            order_id: order.id,
+            order_item_id: insertedItem.id,
+            meal_pack_menu_id: item.meal_pack_menu_id ?? null,
+            option_name: optionName,
+            quantity,
+          })
+        );
+
+        const { error: selectionError } = await supabaseAdmin
+          .from("order_item_selections")
+          .insert(selectionRows);
+
+        if (selectionError) {
+          console.error("Order item selections insert error:", selectionError);
+          return NextResponse.json(
+            { error: "Failed to save meal pack selections" },
+            { status: 500 }
+          );
+        }
+      }
     }
 
     const siteUrl =

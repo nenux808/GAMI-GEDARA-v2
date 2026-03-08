@@ -10,7 +10,10 @@ export default function AdminHeader() {
     <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <Link href="/admin" className="text-xl font-extrabold tracking-tight text-white">
+          <Link
+            href="/admin"
+            className="text-xl font-extrabold tracking-tight text-white"
+          >
             Gami Gedara Admin
           </Link>
           <p className="mt-1 text-sm text-slate-400">
@@ -34,6 +37,9 @@ export default function AdminHeader() {
             </Link>
             <Link href="/admin/meal-pack-options" className={navClass()}>
               Options
+            </Link>
+            <Link href="/admin/meal-pack-summary" className={navClass()}>
+              Prep Summary
             </Link>
           </nav>
 
