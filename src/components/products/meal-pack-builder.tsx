@@ -10,11 +10,15 @@ type MealPackBuilderProps = {
   options: MealPackOption[];
 };
 
-function formatDateTime(value: string) {
+function formatDateTime(value: string | null) {
+  if (!value) return "—";
+
   return new Date(value).toLocaleString("en-AU", {
+    timeZone: "Australia/Melbourne",
     weekday: "short",
     day: "2-digit",
     month: "short",
+    year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -52,7 +56,9 @@ export default function MealPackBuilder({
   }, [options]);
 
   const selectedOptionObjects = useMemo(() => {
-    return options.filter((option) => (selectedQuantities[option.name] ?? 0) > 0);
+    return options.filter(
+      (option) => (selectedQuantities[option.name] ?? 0) > 0
+    );
   }, [options, selectedQuantities]);
 
   const totalSelectedItems = useMemo(() => {

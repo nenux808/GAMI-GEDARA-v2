@@ -16,10 +16,9 @@ function slugify(value: string) {
     .replace(/-+/g, "-");
 }
 
-function combineDateAndTimeToIso(date: string, time: string) {
+function combineDateAndTime(date: string, time: string) {
   if (!date || !time) return "";
-  const localDate = new Date(`${date}T${time}`);
-  return localDate.toISOString();
+  return `${date}T${time}:00`;
 }
 
 export default function MealPackForm({ onCreated }: MealPackFormProps) {
@@ -52,17 +51,17 @@ export default function MealPackForm({ onCreated }: MealPackFormProps) {
     e.preventDefault();
     setMessage("");
 
-    const availableFrom = combineDateAndTimeToIso(
+    const availableFrom = combineDateAndTime(
       availableFromDate,
       availableFromTime
     );
-    const orderCutoffAt = combineDateAndTimeToIso(
+    const orderCutoffAt = combineDateAndTime(
       orderCutoffDate,
       orderCutoffTime
     );
     const pickupDate =
       pickupDateValue && pickupTimeValue
-        ? combineDateAndTimeToIso(pickupDateValue, pickupTimeValue)
+        ? combineDateAndTime(pickupDateValue, pickupTimeValue)
         : null;
 
     if (

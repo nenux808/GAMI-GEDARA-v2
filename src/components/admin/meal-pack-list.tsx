@@ -4,6 +4,7 @@ function formatDateTime(value: string | null) {
   if (!value) return "—";
 
   return new Date(value).toLocaleString("en-AU", {
+    timeZone: "Australia/Melbourne",
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
