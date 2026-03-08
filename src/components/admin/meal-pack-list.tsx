@@ -3,7 +3,9 @@ import type { MealPackMenu } from "@/types/meal-pack";
 function formatDateTime(value: string | null) {
   if (!value) return "—";
 
-  return new Date(value).toLocaleString("en-AU", {
+  const date = new Date(value.replace(" ", "T"));
+
+  return date.toLocaleString("en-AU", {
     timeZone: "Australia/Melbourne",
     weekday: "short",
     day: "2-digit",

@@ -13,7 +13,9 @@ type MealPackBuilderProps = {
 function formatDateTime(value: string | null) {
   if (!value) return "—";
 
-  return new Date(value).toLocaleString("en-AU", {
+  const date = new Date(value.replace(" ", "T"));
+
+  return date.toLocaleString("en-AU", {
     timeZone: "Australia/Melbourne",
     weekday: "short",
     day: "2-digit",
@@ -32,8 +34,8 @@ export default function MealPackBuilder({
   const { showToast } = useToast();
 
   const now = new Date();
-  const openAt = new Date(menu.available_from);
-  const cutoffAt = new Date(menu.order_cutoff_at);
+  const openAt = new Date(menu.available_from.replace(" ", "T"));
+  const cutoffAt = new Date(menu.order_cutoff_at.replace(" ", "T"));
 
   const isScheduled = now < openAt;
   const isClosed = now >= cutoffAt;
