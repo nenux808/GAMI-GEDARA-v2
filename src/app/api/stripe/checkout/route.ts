@@ -21,6 +21,29 @@ type CustomerDetails = {
   notes?: string;
 };
 
+function normalizeDateTime(value: string | null) {
+  if (!value) return "";
+  return value.replace(" ", "T").slice(0, 19);
+}
+
+function getMelbourneNowComparable() {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Australia/Melbourne",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(new Date());
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+  return `${map.year}-${map.month}-${map.day}T${map.hour}:${map.minute}:${map.second}`;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -60,7 +83,7 @@ export async function POST(req: Request) {
         );
       }
 
-      const now = new Date();
+      const nowComparable = getMelbourneNowComparable();
 
       for (const mealPackId of uniqueMealPackIds) {
         const menu = menus?.find((m) => m.id === mealPackId);
@@ -72,17 +95,17 @@ export async function POST(req: Request) {
           );
         }
 
-        const availableFrom = new Date(menu.available_from);
-        const cutoffAt = new Date(menu.order_cutoff_at);
+        const availableFrom = normalizeDateTime(menu.available_from);
+        const cutoffAt = normalizeDateTime(menu.order_cutoff_at);
 
-        if (now < availableFrom) {
+        if (nowComparable < availableFrom) {
           return NextResponse.json(
             { error: `${menu.title} is not open for ordering yet` },
             { status: 400 }
           );
         }
 
-        if (now >= cutoffAt) {
+        if (nowComparable >= cutoffAt) {
           return NextResponse.json(
             { error: `${menu.title} ordering has closed` },
             { status: 400 }
