@@ -41,6 +41,9 @@ export default function AdminHeader() {
             <Link href="/admin/meal-pack-summary" className={navClass()}>
               Prep Summary
             </Link>
+            <Link href="/admin/kitchen-print" className={navClass()}>
+              Kitchen Print
+            </Link>
           </nav>
 
           <div>
