@@ -10,20 +10,46 @@ type MealPackBuilderProps = {
   options: MealPackOption[];
 };
 
+function pad(value: number) {
+  return value.toString().padStart(2, "0");
+}
+
+function normalizeDateTime(value: string | null) {
+  if (!value) return "";
+  return value.replace(" ", "T").slice(0, 19);
+}
+
 function formatDateTime(value: string | null) {
   if (!value) return "—";
 
-  const date = new Date(value.replace(" ", "T"));
+  const normalized = normalizeDateTime(value);
+  const [datePart, timePart = "00:00:00"] = normalized.split("T");
+  const [year, month, day] = datePart.split("-");
+  const [hourRaw, minute] = timePart.split(":");
 
-  return date.toLocaleString("en-AU", {
+  const hour24 = Number(hourRaw);
+  const hour12 = hour24 % 12 || 12;
+  const ampm = hour24 >= 12 ? "pm" : "am";
+
+  return `${day}/${month}/${year}, ${pad(hour12)}:${minute} ${ampm}`;
+}
+
+function getMelbourneNowComparable() {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Australia/Melbourne",
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
     year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
   });
+
+  const parts = formatter.formatToParts(new Date());
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+  return `${map.year}-${map.month}-${map.day}T${map.hour}:${map.minute}:${map.second}`;
 }
 
 export default function MealPackBuilder({
@@ -33,12 +59,12 @@ export default function MealPackBuilder({
   const { addItem } = useCart();
   const { showToast } = useToast();
 
-  const now = new Date();
-  const openAt = new Date(menu.available_from.replace(" ", "T"));
-  const cutoffAt = new Date(menu.order_cutoff_at.replace(" ", "T"));
+  const nowComparable = getMelbourneNowComparable();
+  const openAt = normalizeDateTime(menu.available_from);
+  const cutoffAt = normalizeDateTime(menu.order_cutoff_at);
 
-  const isScheduled = now < openAt;
-  const isClosed = now >= cutoffAt;
+  const isScheduled = nowComparable < openAt;
+  const isClosed = nowComparable >= cutoffAt;
   const isOpen = !isScheduled && !isClosed && menu.is_active;
 
   const [selectedQuantities, setSelectedQuantities] = useState<

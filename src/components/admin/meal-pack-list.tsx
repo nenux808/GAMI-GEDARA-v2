@@ -1,19 +1,22 @@
 import type { MealPackMenu } from "@/types/meal-pack";
 
+function pad(value: number) {
+  return value.toString().padStart(2, "0");
+}
+
 function formatDateTime(value: string | null) {
   if (!value) return "—";
 
-  const date = new Date(value.replace(" ", "T"));
+  const normalized = value.replace(" ", "T");
+  const [datePart, timePart = "00:00:00"] = normalized.split("T");
+  const [year, month, day] = datePart.split("-");
+  const [hourRaw, minute] = timePart.split(":");
 
-  return date.toLocaleString("en-AU", {
-    timeZone: "Australia/Melbourne",
-    weekday: "short",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const hour24 = Number(hourRaw);
+  const hour12 = hour24 % 12 || 12;
+  const ampm = hour24 >= 12 ? "pm" : "am";
+
+  return `${day}/${month}/${year}, ${pad(hour12)}:${minute} ${ampm}`;
 }
 
 export default function MealPackList({
