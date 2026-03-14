@@ -122,7 +122,7 @@ export default async function HomePage() {
 
             {products.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500 sm:p-10">
-                No featured products yet. Add some in Supabase and they’ll show here.
+                No featured products yet.
               </div>
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:gap-6 xl:grid-cols-3">
