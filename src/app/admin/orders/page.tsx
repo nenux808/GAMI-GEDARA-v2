@@ -6,9 +6,9 @@ import type { Order } from "@/types/order";
 export default async function AdminOrdersPage() {
   const { data, error } = await supabaseAdmin
     .from("orders")
-    .select(
-      `
+    .select(`
       id,
+      order_number,
       customer_name,
       customer_email,
       customer_phone,
@@ -17,8 +17,18 @@ export default async function AdminOrdersPage() {
       delivery_fee,
       total_amount,
       currency,
+      payment_method,
       payment_status,
+      verification_status,
       fulfilment_status,
+      pickup_time,
+      verification_token,
+      verification_expires_at,
+      verified_at,
+      risk_flag,
+      no_show_flag,
+      counter_paid_at,
+      active_for_kitchen,
       stripe_checkout_session_id,
       stripe_payment_intent_id,
       created_at,
@@ -31,8 +41,7 @@ export default async function AdminOrdersPage() {
         quantity,
         line_total
       )
-    `
-    )
+    `)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -42,12 +51,33 @@ export default async function AdminOrdersPage() {
   const orders = (data ?? []) as Order[];
 
   const totalOrders = orders.length;
-  const paidOrders = orders.filter((order) => order.payment_status === "paid").length;
-  const pendingOrders = orders.filter(
-    (order) => order.payment_status === "pending"
+
+  const paidOrders = orders.filter(
+    (order) =>
+      order.payment_status === "paid" ||
+      order.payment_status === "paid_counter"
   ).length;
+
+  const pendingVerificationOrders = orders.filter(
+    (order) => order.fulfilment_status === "pending_verification"
+  ).length;
+
+  const awaitingCounterPaymentOrders = orders.filter(
+    (order) =>
+      order.payment_method === "counter" &&
+      order.fulfilment_status === "awaiting_counter_payment"
+  ).length;
+
+  const activeKitchenOrders = orders.filter(
+    (order) => order.active_for_kitchen
+  ).length;
+
   const totalRevenue = orders
-    .filter((order) => order.payment_status === "paid")
+    .filter(
+      (order) =>
+        order.payment_status === "paid" ||
+        order.payment_status === "paid_counter"
+    )
     .reduce((sum, order) => sum + Number(order.total_amount), 0);
 
   return (
@@ -59,11 +89,12 @@ export default async function AdminOrdersPage() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-slate-900">Orders</h1>
             <p className="mt-2 text-slate-600">
-              View customer details, payment status, and order contents.
+              View customer details, payment status, verification state, and
+              order contents.
             </p>
           </div>
 
-          <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-sm text-slate-500">Total Orders</p>
               <p className="mt-2 text-3xl font-bold text-slate-900">
@@ -79,12 +110,28 @@ export default async function AdminOrdersPage() {
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Pending Orders</p>
+              <p className="text-sm text-slate-500">Pending Verification</p>
               <p className="mt-2 text-3xl font-bold text-amber-700">
-                {pendingOrders}
+                {pendingVerificationOrders}
               </p>
             </div>
 
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-sm text-slate-500">Awaiting Counter Payment</p>
+              <p className="mt-2 text-3xl font-bold text-orange-700">
+                {awaitingCounterPaymentOrders}
+              </p>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-sm text-slate-500">Active for Kitchen</p>
+              <p className="mt-2 text-3xl font-bold text-blue-700">
+                {activeKitchenOrders}
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-8 grid gap-4 sm:grid-cols-1 xl:grid-cols-1">
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-sm text-slate-500">Revenue</p>
               <p className="mt-2 text-3xl font-bold text-slate-900">

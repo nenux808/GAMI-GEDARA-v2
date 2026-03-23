@@ -14,8 +14,12 @@ type OrderRow = {
   customer_phone: string | null;
   customer_email: string | null;
   created_at: string;
+  payment_method: string;
   payment_status: string;
+  verification_status: string;
   fulfilment_status: string;
+  pickup_time: string | null;
+  active_for_kitchen: boolean;
   order_item_selections: SelectionRow[] | null;
 };
 
@@ -28,6 +32,21 @@ function formatHumanDate(value: string) {
     year: "numeric",
     month: "short",
     day: "2-digit",
+  });
+}
+
+function formatHumanDateTime(value: string | null | undefined) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleString("en-AU", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -77,8 +96,12 @@ export default async function KitchenPrintPage({
       customer_phone,
       customer_email,
       created_at,
+      payment_method,
       payment_status,
+      verification_status,
       fulfilment_status,
+      pickup_time,
+      active_for_kitchen,
       order_item_selections (
         option_name,
         quantity,
@@ -86,8 +109,13 @@ export default async function KitchenPrintPage({
       )
     `
     )
-    .eq("payment_status", "paid")
-    .in("fulfilment_status", ["new", "preparing"])
+    .eq("active_for_kitchen", true)
+    .in("fulfilment_status", [
+      "new",
+      "awaiting_counter_payment",
+      "preparing",
+      "ready_for_pickup",
+    ])
     .gte("created_at", startIso)
     .lt("created_at", endIso)
     .order("created_at", { ascending: true });
@@ -193,7 +221,7 @@ export default async function KitchenPrintPage({
 
             {orders.length === 0 ? (
               <div className="mt-6 rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
-                No paid meal pack orders found for this period.
+                No active meal pack orders found for this period.
               </div>
             ) : (
               <div className="mt-8 space-y-10">
@@ -235,7 +263,7 @@ export default async function KitchenPrintPage({
                         key={order.id}
                         className="rounded-2xl border border-slate-200 p-4"
                       >
-                        <div className="flex flex-col gap-2 border-b border-slate-200 pb-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex flex-col gap-3 border-b border-slate-200 pb-3 sm:flex-row sm:items-start sm:justify-between">
                           <div>
                             <p className="font-bold text-slate-900">
                               {order.customer_name || "Customer"}
@@ -243,10 +271,33 @@ export default async function KitchenPrintPage({
                             <p className="text-sm text-slate-600">
                               {order.customer_phone || order.customer_email || "—"}
                             </p>
+
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                                {order.payment_method === "counter"
+                                  ? "Pay at Counter"
+                                  : "Paid Online"}
+                              </span>
+
+                              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                                {order.fulfilment_status.replace(/_/g, " ")}
+                              </span>
+
+                              {order.payment_method === "counter" ? (
+                                <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-800">
+                                  {order.payment_status.replace(/_/g, " ")}
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
 
-                          <div className="text-sm text-slate-600">
-                            {formatHumanDate(order.created_at)}
+                          <div className="text-sm text-slate-600 sm:text-right">
+                            <p>{formatHumanDate(order.created_at)}</p>
+                            {order.payment_method === "counter" ? (
+                              <p className="mt-1 font-medium text-slate-700">
+                                Pickup: {formatHumanDateTime(order.pickup_time)}
+                              </p>
+                            ) : null}
                           </div>
                         </div>
 

@@ -2,6 +2,13 @@ import Link from "next/link";
 import SiteHeader from "@/components/layout/site-header";
 import SiteFooter from "@/components/layout/site-footer";
 import ClearCartOnSuccess from "@/components/checkout/clear-cart-on-success";
+import { stripe } from "@/lib/stripe";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+
+function formatOrderNumber(orderNumber: number | string | null | undefined) {
+  if (!orderNumber) return null;
+  return `GAMI-ORDER-${String(orderNumber).padStart(5, "0")}`;
+}
 
 export default async function CheckoutSuccessPage({
   searchParams,
@@ -9,6 +16,27 @@ export default async function CheckoutSuccessPage({
   searchParams: Promise<{ session_id?: string }>;
 }) {
   const { session_id } = await searchParams;
+
+  let customOrderNumber: string | null = null;
+
+  if (session_id) {
+    try {
+      const session = await stripe.checkout.sessions.retrieve(session_id);
+      const orderId = session.metadata?.order_id ?? null;
+
+      if (orderId) {
+        const { data: order } = await supabaseAdmin
+          .from("orders")
+          .select("order_number")
+          .eq("id", orderId)
+          .maybeSingle();
+
+        customOrderNumber = formatOrderNumber(order?.order_number);
+      }
+    } catch (error) {
+      console.error("Failed to load custom order number:", error);
+    }
+  }
 
   return (
     <>
@@ -34,13 +62,13 @@ export default async function CheckoutSuccessPage({
                 shortly.
               </p>
 
-              {session_id ? (
+              {customOrderNumber ? (
                 <div className="mt-6 rounded-2xl bg-slate-50 p-4">
                   <p className="text-sm font-medium text-slate-500">
-                    Payment Reference
+                    Order Number
                   </p>
-                  <p className="mt-1 break-all text-sm font-semibold text-slate-900">
-                    {session_id}
+                  <p className="mt-1 break-all text-lg font-bold text-slate-900">
+                    {customOrderNumber}
                   </p>
                 </div>
               ) : null}

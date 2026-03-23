@@ -7,9 +7,11 @@ import SiteFooter from "@/components/layout/site-footer";
 import { useCart } from "@/components/cart/cart-context";
 import { useToast } from "@/components/ui/toast-context";
 
+type PaymentMethod = "online" | "counter";
+
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotal } = useCart();
+  const { items, subtotal, clearCart } = useCart();
   const { showToast } = useToast();
 
   const [fullName, setFullName] = useState("");
@@ -17,12 +19,16 @@ export default function CheckoutPage() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("online");
+  const [pickupTime, setPickupTime] = useState("");
   const [loading, setLoading] = useState(false);
 
   const itemCount = useMemo(
     () => items.reduce((sum, item) => sum + item.quantity, 0),
     [items]
   );
+
+  const isCounterPayment = paymentMethod === "counter";
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -34,6 +40,11 @@ export default function CheckoutPage() {
 
     if (!fullName.trim() || !email.trim() || !phone.trim()) {
       showToast("Please fill in name, email, and phone number");
+      return;
+    }
+
+    if (isCounterPayment && !pickupTime) {
+      showToast("Please select a pickup time");
       return;
     }
 
@@ -54,6 +65,8 @@ export default function CheckoutPage() {
             address,
             notes,
           },
+          paymentMethod,
+          pickupTime: isCounterPayment ? pickupTime : null,
         }),
       });
 
@@ -65,8 +78,20 @@ export default function CheckoutPage() {
         return;
       }
 
-      if (data.url) {
+      if (paymentMethod === "online" && data.url) {
         window.location.href = data.url;
+        return;
+      }
+
+      if (paymentMethod === "counter" && data.success) {
+        clearCart?.();
+        showToast(
+          data.message ||
+            "Your order was placed. Please check your email to confirm it."
+        );
+        router.push(
+          `/checkout/verify?status=pending-email&order=${data.orderNumber ?? ""}`
+        );
         return;
       }
 
@@ -113,6 +138,62 @@ export default function CheckoutPage() {
                   onSubmit={handleSubmit}
                   className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
                 >
+                  <div className="mb-6">
+                    <label className="mb-3 block text-sm font-medium text-slate-700">
+                      Payment Method
+                    </label>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("online")}
+                        className={`rounded-2xl border px-4 py-4 text-left transition ${
+                          paymentMethod === "online"
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-300 bg-white text-slate-900 hover:border-slate-400"
+                        }`}
+                      >
+                        <p className="text-sm font-semibold">Pay Online</p>
+                        <p
+                          className={`mt-1 text-xs ${
+                            paymentMethod === "online"
+                              ? "text-slate-200"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          Secure online checkout with card payment.
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("counter")}
+                        className={`rounded-2xl border px-4 py-4 text-left transition ${
+                          paymentMethod === "counter"
+                            ? "border-amber-500 bg-amber-50 text-slate-900"
+                            : "border-slate-300 bg-white text-slate-900 hover:border-slate-400"
+                        }`}
+                      >
+                        <p className="text-sm font-semibold">Pay at Counter</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Place your order now and pay when you collect it.
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {isCounterPayment ? (
+                    <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-sm font-medium text-amber-900">
+                        Counter-payment orders must be confirmed by email before
+                        they are accepted.
+                      </p>
+                      <p className="mt-1 text-xs leading-6 text-amber-800">
+                        Please confirm your Pay at Counter order through the verification email before it can be accepted.
+                      </p>
+                    </div>
+                  ) : null}
+
                   <div className="grid gap-5 sm:grid-cols-2">
                     <div className="sm:col-span-2">
                       <label className="mb-2 block text-sm font-medium text-slate-700">
@@ -153,6 +234,23 @@ export default function CheckoutPage() {
                       />
                     </div>
 
+                    {isCounterPayment ? (
+                      <div className="sm:col-span-2">
+                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                          Pickup Time
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={pickupTime}
+                          onChange={(e) => setPickupTime(e.target.value)}
+                          className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
+                        />
+                        <p className="mt-2 text-xs text-slate-500">
+                          Please choose when you plan to collect your order.
+                        </p>
+                      </div>
+                    ) : null}
+
                     <div className="sm:col-span-2">
                       <label className="mb-2 block text-sm font-medium text-slate-700">
                         Address
@@ -175,7 +273,11 @@ export default function CheckoutPage() {
                         onChange={(e) => setNotes(e.target.value)}
                         rows={4}
                         className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-slate-900"
-                        placeholder="Any important delivery or order notes"
+                        placeholder={
+                          isCounterPayment
+                            ? "Any pickup or order notes"
+                            : "Any important delivery or order notes"
+                        }
                       />
                     </div>
                   </div>
@@ -186,10 +288,18 @@ export default function CheckoutPage() {
                     className={`mt-8 w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white transition ${
                       loading
                         ? "cursor-not-allowed bg-slate-400"
-                        : "bg-slate-900 hover:opacity-90"
+                        : isCounterPayment
+                          ? "bg-amber-600 hover:bg-amber-700"
+                          : "bg-slate-900 hover:opacity-90"
                     }`}
                   >
-                    {loading ? "Redirecting to Payment..." : "Continue to Payment"}
+                    {loading
+                      ? isCounterPayment
+                        ? "Placing Order..."
+                        : "Redirecting to Payment..."
+                      : isCounterPayment
+                        ? "Place Order"
+                        : "Continue to Payment"}
                   </button>
                 </form>
 
@@ -213,7 +323,8 @@ export default function CheckoutPage() {
                               Qty: {item.quantity}
                             </p>
 
-                            {item.type === "meal_pack" && item.selections?.length ? (
+                            {item.type === "meal_pack" &&
+                            item.selections?.length ? (
                               <div className="mt-2 flex flex-wrap gap-2">
                                 {item.selections.map((selection) => (
                                   <span
@@ -250,9 +361,11 @@ export default function CheckoutPage() {
                   </div>
 
                   <div className="mt-3 flex items-center justify-between text-sm text-slate-600">
-                    <span>Delivery</span>
+                    <span>
+                      {isCounterPayment ? "Payment" : "Delivery"}
+                    </span>
                     <span className="font-semibold text-slate-900">
-                      Calculated later
+                      {isCounterPayment ? "Pay at Counter" : "Calculated later"}
                     </span>
                   </div>
 

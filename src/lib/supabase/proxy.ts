@@ -31,7 +31,18 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (
+    error &&
+    error.code !== "refresh_token_not_found" &&
+    error.code !== "invalid_grant"
+  ) {
+    console.error("Supabase auth error:", error);
+  }
 
   return response;
 }

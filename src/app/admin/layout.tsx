@@ -8,12 +8,27 @@ export default async function AdminLayout({
 }) {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  let user: { id: string; email?: string | null } | null = null;
 
-  console.log("ADMIN USER:", user?.id, user?.email, userError);
+  try {
+    const {
+      data: { user: authUser },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (
+      error &&
+      error.code !== "refresh_token_not_found" &&
+      error.code !== "invalid_grant"
+    ) {
+      console.error("Admin auth error:", error);
+    }
+
+    user = authUser;
+  } catch (error) {
+    console.warn("Admin auth refresh skipped:", error);
+    user = null;
+  }
 
   if (!user) {
     redirect("/organizer-login");
@@ -25,7 +40,9 @@ export default async function AdminLayout({
     .eq("id", user.id)
     .maybeSingle();
 
-  console.log("ADMIN PROFILE:", profile, profileError);
+  if (profileError) {
+    console.error("Admin profile lookup error:", profileError);
+  }
 
   if (!profile || profile.role !== "admin") {
     redirect("/organizer-login");
