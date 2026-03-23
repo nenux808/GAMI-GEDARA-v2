@@ -271,7 +271,7 @@ export async function POST(req: Request) {
       const verificationToken = crypto.randomBytes(32).toString("hex");
       const verificationExpiresAt = getVerificationExpiryDate(15);
       const siteUrl = getSiteUrl();
-      const verificationUrl = `${siteUrl}/api/checkout/verify?token=${verificationToken}`;
+      const verificationUrl = `${siteUrl}/api/orders/verify?token=${verificationToken}`;
 
       const { data: order, error: orderError } = await supabaseAdmin
         .from("orders")
