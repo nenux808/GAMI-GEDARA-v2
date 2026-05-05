@@ -20,6 +20,7 @@ type OrderRow = {
   fulfilment_status: string;
   pickup_time: string | null;
   active_for_kitchen: boolean;
+  total_amount: number;
   order_item_selections: SelectionRow[] | null;
 };
 
@@ -102,6 +103,7 @@ export default async function KitchenPrintPage({
       fulfilment_status,
       pickup_time,
       active_for_kitchen,
+      total_amount,
       order_item_selections (
         option_name,
         quantity,
@@ -125,7 +127,8 @@ export default async function KitchenPrintPage({
   }
 
   const orders = ((data ?? []) as unknown as OrderRow[]).filter(
-    (order) => order.order_item_selections && order.order_item_selections.length > 0
+    (order) =>
+      order.order_item_selections && order.order_item_selections.length > 0
   );
 
   const prepTotals = new Map<string, number>();
@@ -158,7 +161,8 @@ export default async function KitchenPrintPage({
                 Kitchen Print Sheet
               </h1>
               <p className="mt-2 text-slate-600">
-                Print prep totals and customer packing details for the selected date range.
+                Print prep totals and customer packing details for the selected
+                date range.
               </p>
             </div>
 
@@ -293,11 +297,18 @@ export default async function KitchenPrintPage({
 
                           <div className="text-sm text-slate-600 sm:text-right">
                             <p>{formatHumanDate(order.created_at)}</p>
+
                             {order.payment_method === "counter" ? (
                               <p className="mt-1 font-medium text-slate-700">
                                 Pickup: {formatHumanDateTime(order.pickup_time)}
                               </p>
                             ) : null}
+
+                            <p className="mt-2 text-base font-bold text-slate-900">
+                              {order.payment_method === "counter"
+                                ? `Collect: $${Number(order.total_amount).toFixed(2)}`
+                                : `Paid: $${Number(order.total_amount).toFixed(2)}`}
+                            </p>
                           </div>
                         </div>
 
