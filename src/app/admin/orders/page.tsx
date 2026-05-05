@@ -1,10 +1,77 @@
 import AdminHeader from "@/components/admin/admin-header";
 import OrderCard from "@/components/admin/order-card";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import type { Order } from "@/types/order";
+import type { Order, FulfilmentStatus, PaymentMethod } from "@/types/order";
 
-export default async function AdminOrdersPage() {
-  const { data, error } = await supabaseAdmin
+type SearchParams = Promise<{
+  q?: string;
+  start?: string;
+  end?: string;
+  paymentMethod?: string;
+  fulfilmentStatus?: string;
+}>;
+
+function formatDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function buildDateRange(start?: string, end?: string) {
+  const today = new Date();
+  const defaultDate = formatDate(today);
+
+  const startDate = start || defaultDate;
+  const endDate = end || defaultDate;
+
+  const startIso = `${startDate}T00:00:00`;
+  const endExclusiveDate = new Date(`${endDate}T00:00:00`);
+  endExclusiveDate.setDate(endExclusiveDate.getDate() + 1);
+  const endIso = endExclusiveDate.toISOString().slice(0, 19);
+
+  return {
+    startDate,
+    endDate,
+    startIso,
+    endIso,
+  };
+}
+
+const paymentMethodOptions: Array<{ value: string; label: string }> = [
+  { value: "all", label: "All Payment Methods" },
+  { value: "online", label: "Online" },
+  { value: "counter", label: "Counter" },
+];
+
+const fulfilmentStatusOptions: Array<{ value: string; label: string }> = [
+  { value: "all", label: "All Statuses" },
+  { value: "active", label: "Active Orders" },
+  { value: "pending_verification", label: "Pending Verification" },
+  { value: "awaiting_counter_payment", label: "Awaiting Counter Payment" },
+  { value: "new", label: "New" },
+  { value: "preparing", label: "Preparing" },
+  { value: "ready_for_pickup", label: "Ready for Pickup" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "expired", label: "Expired" },
+  { value: "no_show", label: "No Show" },
+];
+
+export default async function AdminOrdersPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const params = await searchParams;
+
+  const searchQuery = params.q?.trim() || "";
+  const selectedPaymentMethod = params.paymentMethod || "all";
+  const selectedFulfilmentStatus = params.fulfilmentStatus || "active";
+
+  const { startDate, endDate, startIso, endIso } = buildDateRange(
+    params.start,
+    params.end
+  );
+
+  let query = supabaseAdmin
     .from("orders")
     .select(`
       id,
@@ -42,7 +109,59 @@ export default async function AdminOrdersPage() {
         line_total
       )
     `)
+    .gte("created_at", startIso)
+    .lt("created_at", endIso)
     .order("created_at", { ascending: false });
+
+  if (
+    selectedPaymentMethod === "online" ||
+    selectedPaymentMethod === "counter"
+  ) {
+    query = query.eq("payment_method", selectedPaymentMethod as PaymentMethod);
+  }
+
+  if (selectedFulfilmentStatus === "active") {
+    query = query.in("fulfilment_status", [
+      "new",
+      "awaiting_counter_payment",
+      "preparing",
+      "ready_for_pickup",
+    ]);
+  } else if (
+    [
+      "pending_verification",
+      "awaiting_counter_payment",
+      "new",
+      "preparing",
+      "ready_for_pickup",
+      "completed",
+      "cancelled",
+      "expired",
+      "no_show",
+    ].includes(selectedFulfilmentStatus)
+  ) {
+    query = query.eq(
+      "fulfilment_status",
+      selectedFulfilmentStatus as FulfilmentStatus
+    );
+  }
+
+  if (searchQuery) {
+    const escaped = searchQuery.replace(/,/g, " ");
+    const possibleOrderNumber = Number(searchQuery);
+
+    if (!Number.isNaN(possibleOrderNumber) && searchQuery.match(/^\d+$/)) {
+      query = query.or(
+        `customer_name.ilike.%${escaped}%,customer_email.ilike.%${escaped}%,customer_phone.ilike.%${escaped}%,order_number.eq.${possibleOrderNumber}`
+      );
+    } else {
+      query = query.or(
+        `customer_name.ilike.%${escaped}%,customer_email.ilike.%${escaped}%,customer_phone.ilike.%${escaped}%`
+      );
+    }
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Failed to load admin orders:", error.message);
@@ -94,6 +213,104 @@ export default async function AdminOrdersPage() {
             </p>
           </div>
 
+          <form
+            method="GET"
+            className="mb-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
+          >
+            <div className="grid gap-4 lg:grid-cols-5">
+              <div className="lg:col-span-2">
+                <label className="mb-2 block text-sm font-semibold text-slate-900">
+                  Search
+                </label>
+                <input
+                  type="text"
+                  name="q"
+                  defaultValue={searchQuery}
+                  placeholder="Name, phone, email, or order number"
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-900">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  name="start"
+                  defaultValue={startDate}
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-900">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  name="end"
+                  defaultValue={endDate}
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
+                />
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-4">
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-900">
+                  Payment Method
+                </label>
+                <select
+                  name="paymentMethod"
+                  defaultValue={selectedPaymentMethod}
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
+                >
+                  {paymentMethodOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-900">
+                  Fulfilment Status
+                </label>
+                <select
+                  name="fulfilmentStatus"
+                  defaultValue={selectedFulfilmentStatus}
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
+                >
+                  {fulfilmentStatusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <a
+                  href="/admin/orders"
+                  className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Reset
+                </a>
+              </div>
+            </div>
+          </form>
+
           <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-sm text-slate-500">Total Orders</p>
@@ -142,7 +359,7 @@ export default async function AdminOrdersPage() {
 
           {orders.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-              No orders found yet.
+              No orders found for the selected filters.
             </div>
           ) : (
             <div className="space-y-6">
