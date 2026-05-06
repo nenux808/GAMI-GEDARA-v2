@@ -17,10 +17,14 @@ function formatDate(date: Date) {
 
 function buildDateRange(start?: string, end?: string) {
   const today = new Date();
-  const defaultDate = formatDate(today);
+  const defaultEnd = formatDate(today);
 
-  const startDate = start || defaultDate;
-  const endDate = end || defaultDate;
+  const defaultStartDate = new Date(today);
+  defaultStartDate.setDate(defaultStartDate.getDate() - 7);
+  const defaultStart = formatDate(defaultStartDate);
+
+  const startDate = start || defaultStart;
+  const endDate = end || defaultEnd;
 
   const startIso = `${startDate}T00:00:00`;
   const endExclusiveDate = new Date(`${endDate}T00:00:00`);
@@ -64,7 +68,7 @@ export default async function AdminOrdersPage({
 
   const searchQuery = params.q?.trim() || "";
   const selectedPaymentMethod = params.paymentMethod || "all";
-  const selectedFulfilmentStatus = params.fulfilmentStatus || "active";
+  const selectedFulfilmentStatus = params.fulfilmentStatus || "all";
 
   const { startDate, endDate, startIso, endIso } = buildDateRange(
     params.start,
