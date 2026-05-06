@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import AdminHeader from "@/components/admin/admin-header";
+import AdminFooter from "@/components/admin/admin-footer";
 
 export default async function AdminLayout({
   children,
@@ -48,5 +50,11 @@ export default async function AdminLayout({
     redirect("/organizer-login");
   }
 
-  return <>{children}</>;
+  return (
+    <div className="flex min-h-screen flex-col bg-slate-50">
+      <AdminHeader />
+      <div className="flex-1">{children}</div>
+      <AdminFooter />
+    </div>
+  );
 }
