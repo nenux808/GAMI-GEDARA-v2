@@ -1,15 +1,38 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
+function formatDateTimeLocal(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  const hours = `${date.getHours()}`.padStart(2, "0");
+  const minutes = `${date.getMinutes()}`.padStart(2, "0");
+  const seconds = `${date.getSeconds()}`.padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+}
+
 export default async function AdminDashboardPage() {
-  const todayStart = new Date();
+  const now = new Date();
+
+  const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
+
+  const weekStart = new Date(now);
+  const day = weekStart.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  weekStart.setDate(weekStart.getDate() + diff);
+  weekStart.setHours(0, 0, 0, 0);
+
+  const todayStartIso = formatDateTimeLocal(todayStart);
+  const weekStartIso = formatDateTimeLocal(weekStart);
 
   const [
     { count: orderCount },
     { count: productCount },
     { count: mealPackCount },
-    { data: orders },
+    { data: allOrders, error: allOrdersError },
+    { data: recentOrders, error: recentOrdersError },
   ] = await Promise.all([
     supabaseAdmin.from("orders").select("*", { count: "exact", head: true }),
     supabaseAdmin.from("products").select("*", { count: "exact", head: true }),
@@ -21,24 +44,47 @@ export default async function AdminDashboardPage() {
       .select(
         "id, customer_name, customer_phone, total_amount, payment_status, payment_method, fulfilment_status, created_at"
       )
+      .gte("created_at", weekStartIso),
+    supabaseAdmin
+      .from("orders")
+      .select(
+        "id, customer_name, customer_phone, total_amount, payment_status, payment_method, fulfilment_status, created_at"
+      )
       .order("created_at", { ascending: false })
       .limit(10),
   ]);
 
-  const orderList = orders ?? [];
+  if (allOrdersError) {
+    console.error("Failed to load dashboard order metrics:", allOrdersError);
+  }
 
-  const paidOrders = orderList.filter((order) => order.payment_status === "paid");
-  const pendingOrders = orderList.filter(
-    (order) => order.payment_status === "pending"
+  if (recentOrdersError) {
+    console.error("Failed to load recent orders:", recentOrdersError);
+  }
+
+  const weeklyOrders = allOrders ?? [];
+  const orderList = recentOrders ?? [];
+
+  const paidStatuses = new Set(["paid", "paid_counter"]);
+
+  const paidOrders = weeklyOrders.filter((order) =>
+    paidStatuses.has(order.payment_status)
   );
-  const counterOrders = orderList.filter(
+
+  const pendingOrders = weeklyOrders.filter(
+    (order) =>
+      order.payment_status === "pending" || order.payment_status === "unpaid"
+  );
+
+  const counterOrders = weeklyOrders.filter(
     (order) => order.payment_method === "counter"
   );
-  const onlineOrders = orderList.filter(
+
+  const onlineOrders = weeklyOrders.filter(
     (order) => order.payment_method === "online"
   );
 
-  const todayOrders = orderList.filter(
+  const todayOrders = weeklyOrders.filter(
     (order) => new Date(order.created_at) >= todayStart
   );
 
@@ -48,7 +94,7 @@ export default async function AdminDashboardPage() {
   );
 
   const todayRevenue = todayOrders
-    .filter((order) => order.payment_status === "paid")
+    .filter((order) => paidStatuses.has(order.payment_status))
     .reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
 
   return (
@@ -70,10 +116,10 @@ export default async function AdminDashboardPage() {
             href="/admin/orders"
           />
 
-          <DashboardCard title="Today’s Orders" value={todayOrders.length} />
+          <DashboardCard title="This Week’s Orders" value={weeklyOrders.length} />
 
           <DashboardCard
-            title="Total Revenue"
+            title="This Week’s Revenue"
             value={`$${totalRevenue.toFixed(2)}`}
           />
 
@@ -84,7 +130,7 @@ export default async function AdminDashboardPage() {
 
           <DashboardCard title="Paid Orders" value={paidOrders.length} />
 
-          <DashboardCard title="Pending Orders" value={pendingOrders.length} />
+          <DashboardCard title="Pending Payments" value={pendingOrders.length} />
 
           <DashboardCard
             title="Products"
