@@ -110,12 +110,12 @@ export default async function KitchenPrintPage({
       )
     `
     )
-    .eq("active_for_kitchen", true)
     .in("fulfilment_status", [
       "new",
       "awaiting_counter_payment",
       "preparing",
       "ready_for_pickup",
+      "completed",
     ])
     .gte("created_at", startIso)
     .lt("created_at", endIso)
@@ -136,7 +136,8 @@ export default async function KitchenPrintPage({
     for (const selection of order.order_item_selections ?? []) {
       prepTotals.set(
         selection.option_name,
-        (prepTotals.get(selection.option_name) ?? 0) + Number(selection.quantity)
+        (prepTotals.get(selection.option_name) ?? 0) +
+          Number(selection.quantity)
       );
     }
   }
@@ -157,7 +158,8 @@ export default async function KitchenPrintPage({
               Kitchen Print Sheet
             </h1>
             <p className="mt-2 text-slate-600">
-              Print prep totals and customer packing details for the selected date range.
+              Print prep totals and customer packing details for the selected
+              date range.
             </p>
           </div>
 
@@ -220,7 +222,7 @@ export default async function KitchenPrintPage({
 
           {orders.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
-              No active meal pack orders found for this period.
+              No meal pack orders found for this period.
             </div>
           ) : (
             <div className="mt-8 space-y-10">
@@ -301,8 +303,12 @@ export default async function KitchenPrintPage({
 
                           <p className="mt-2 text-base font-bold text-slate-900">
                             {order.payment_method === "counter"
-                              ? `Collect: $${Number(order.total_amount).toFixed(2)}`
-                              : `Paid: $${Number(order.total_amount).toFixed(2)}`}
+                              ? `Collect: $${Number(order.total_amount).toFixed(
+                                  2
+                                )}`
+                              : `Paid: $${Number(order.total_amount).toFixed(
+                                  2
+                                )}`}
                           </p>
                         </div>
                       </div>
