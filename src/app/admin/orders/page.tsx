@@ -1,4 +1,3 @@
-import AdminHeader from "@/components/admin/admin-header";
 import OrderCard from "@/components/admin/order-card";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { Order, FulfilmentStatus, PaymentMethod } from "@/types/order";
@@ -154,7 +153,7 @@ export default async function AdminOrdersPage({
     const escaped = searchQuery.replace(/,/g, " ");
     const possibleOrderNumber = Number(searchQuery);
 
-    if (!Number.isNaN(possibleOrderNumber) && searchQuery.match(/^\d+$/)) {
+    if (!Number.isNaN(possibleOrderNumber) && /^\d+$/.test(searchQuery)) {
       query = query.or(
         `customer_name.ilike.%${escaped}%,customer_email.ilike.%${escaped}%,customer_phone.ilike.%${escaped}%,order_number.eq.${possibleOrderNumber}`
       );
@@ -204,174 +203,172 @@ export default async function AdminOrdersPage({
     .reduce((sum, order) => sum + Number(order.total_amount), 0);
 
   return (
-    <>
-      <main className="min-h-screen bg-slate-50 px-6 py-10">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-slate-900">Orders</h1>
-            <p className="mt-2 text-slate-600">
-              View customer details, payment status, verification state, and
-              order contents.
+    <main className="min-h-screen bg-slate-50 px-6 py-10">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900">Orders</h1>
+          <p className="mt-2 text-slate-600">
+            View customer details, payment status, verification state, and
+            order contents.
+          </p>
+        </div>
+
+        <form
+          method="GET"
+          className="mb-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
+        >
+          <div className="grid gap-4 lg:grid-cols-5">
+            <div className="lg:col-span-2">
+              <label className="mb-2 block text-sm font-semibold text-slate-900">
+                Search
+              </label>
+              <input
+                type="text"
+                name="q"
+                defaultValue={searchQuery}
+                placeholder="Name, phone, email, or order number"
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-900">
+                Start Date
+              </label>
+              <input
+                type="date"
+                name="start"
+                defaultValue={startDate}
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-900">
+                End Date
+              </label>
+              <input
+                type="date"
+                name="end"
+                defaultValue={endDate}
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
+              />
+            </div>
+
+            <div className="flex items-end">
+              <button
+                type="submit"
+                className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-4">
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-900">
+                Payment Method
+              </label>
+              <select
+                name="paymentMethod"
+                defaultValue={selectedPaymentMethod}
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
+              >
+                {paymentMethodOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-900">
+                Fulfilment Status
+              </label>
+              <select
+                name="fulfilmentStatus"
+                defaultValue={selectedFulfilmentStatus}
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
+              >
+                {fulfilmentStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-end">
+              <a
+                href="/admin/orders"
+                className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Reset
+              </a>
+            </div>
+          </div>
+        </form>
+
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Total Orders</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">
+              {totalOrders}
             </p>
           </div>
 
-          <form
-            method="GET"
-            className="mb-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
-          >
-            <div className="grid gap-4 lg:grid-cols-5">
-              <div className="lg:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-900">
-                  Search
-                </label>
-                <input
-                  type="text"
-                  name="q"
-                  defaultValue={searchQuery}
-                  placeholder="Name, phone, email, or order number"
-                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-900">
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  name="start"
-                  defaultValue={startDate}
-                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-900">
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  name="end"
-                  defaultValue={endDate}
-                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
-                />
-              </div>
-
-              <div className="flex items-end">
-                <button
-                  type="submit"
-                  className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-                >
-                  Apply Filters
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-4 lg:grid-cols-4">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-900">
-                  Payment Method
-                </label>
-                <select
-                  name="paymentMethod"
-                  defaultValue={selectedPaymentMethod}
-                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
-                >
-                  {paymentMethodOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-900">
-                  Fulfilment Status
-                </label>
-                <select
-                  name="fulfilmentStatus"
-                  defaultValue={selectedFulfilmentStatus}
-                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
-                >
-                  {fulfilmentStatusOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-end">
-                <a
-                  href="/admin/orders"
-                  className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Reset
-                </a>
-              </div>
-            </div>
-          </form>
-
-          <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Total Orders</p>
-              <p className="mt-2 text-3xl font-bold text-slate-900">
-                {totalOrders}
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Paid Orders</p>
-              <p className="mt-2 text-3xl font-bold text-green-700">
-                {paidOrders}
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Pending Verification</p>
-              <p className="mt-2 text-3xl font-bold text-amber-700">
-                {pendingVerificationOrders}
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Awaiting Counter Payment</p>
-              <p className="mt-2 text-3xl font-bold text-orange-700">
-                {awaitingCounterPaymentOrders}
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Active for Kitchen</p>
-              <p className="mt-2 text-3xl font-bold text-blue-700">
-                {activeKitchenOrders}
-              </p>
-            </div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Paid Orders</p>
+            <p className="mt-2 text-3xl font-bold text-green-700">
+              {paidOrders}
+            </p>
           </div>
 
-          <div className="mb-8 grid gap-4 sm:grid-cols-1 xl:grid-cols-1">
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Revenue</p>
-              <p className="mt-2 text-3xl font-bold text-slate-900">
-                ${totalRevenue.toFixed(2)}
-              </p>
-            </div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Pending Verification</p>
+            <p className="mt-2 text-3xl font-bold text-amber-700">
+              {pendingVerificationOrders}
+            </p>
           </div>
 
-          {orders.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-              No orders found for the selected filters.
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {orders.map((order) => (
-                <OrderCard key={order.id} order={order} />
-              ))}
-            </div>
-          )}
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Awaiting Counter Payment</p>
+            <p className="mt-2 text-3xl font-bold text-orange-700">
+              {awaitingCounterPaymentOrders}
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Active for Kitchen</p>
+            <p className="mt-2 text-3xl font-bold text-blue-700">
+              {activeKitchenOrders}
+            </p>
+          </div>
         </div>
-      </main>
-    </>
+
+        <div className="mb-8">
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">Revenue</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">
+              ${totalRevenue.toFixed(2)}
+            </p>
+          </div>
+        </div>
+
+        {orders.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
+            No orders found for the selected filters.
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {orders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))}
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
