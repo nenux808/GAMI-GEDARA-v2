@@ -1,4 +1,3 @@
-import AdminHeader from "@/components/admin/admin-header";
 import MealPackForm from "@/components/admin/meal-pack-form";
 import MealPackList from "@/components/admin/meal-pack-list";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -16,8 +15,6 @@ export default async function AdminMealPacksPage() {
 
   return (
     <>
-      <AdminHeader />
-
       <main className="min-h-screen bg-white px-6 py-10">
         <div className="mx-auto max-w-7xl">
           <div className="mb-8">
