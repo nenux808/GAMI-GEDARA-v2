@@ -29,6 +29,9 @@ export default function AdminHeader() {
             <Link href="/admin/orders" className={navClass()}>
               Orders
             </Link>
+            <Link href="/admin/massages" className={navClass()}>
+              Messages
+            </Link>
             <Link href="/admin/products" className={navClass()}>
               Products
             </Link>
