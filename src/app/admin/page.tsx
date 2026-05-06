@@ -130,43 +130,35 @@ export default async function AdminDashboardPage() {
             value={orderCount ?? 0}
             href="/admin/orders"
           />
-
           <DashboardCard
             title="This Week’s Orders"
             value={weekOrderList.length}
           />
-
           <DashboardCard
             title="All-Time Revenue"
             value={`$${allTimeRevenue.toFixed(2)}`}
           />
-
           <DashboardCard
             title="This Week’s Revenue"
             value={`$${weeklyRevenue.toFixed(2)}`}
           />
-
           <DashboardCard
             title="Today’s Revenue"
             value={`$${todayRevenue.toFixed(2)}`}
           />
-
           <DashboardCard
             title="Paid Orders This Week"
             value={paidOrdersThisWeek.length}
           />
-
           <DashboardCard
             title="Pending Payments"
             value={pendingOrdersThisWeek.length}
           />
-
           <DashboardCard
             title="Products"
             value={productCount ?? 0}
             href="/admin/products"
           />
-
           <DashboardCard
             title="Meal Pack Menus"
             value={mealPackCount ?? 0}

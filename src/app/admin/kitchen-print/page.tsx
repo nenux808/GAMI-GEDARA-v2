@@ -151,7 +151,7 @@ export default async function KitchenPrintPage({
 
   return (
     <>
-      
+      <AdminHeader />
 
       <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-10 print:bg-white print:px-0 print:py-0">
         <div className="mx-auto max-w-6xl space-y-8 print:max-w-none">
