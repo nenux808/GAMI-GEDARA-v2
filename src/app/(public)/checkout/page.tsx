@@ -146,23 +146,15 @@ export default function CheckoutPage() {
                     <div className="grid gap-3 sm:grid-cols-2">
                       <button
                         type="button"
-                        onClick={() => setPaymentMethod("online")}
-                        className={`rounded-2xl border px-4 py-4 text-left transition ${
-                          paymentMethod === "online"
-                            ? "border-slate-900 bg-slate-900 text-white"
-                            : "border-slate-300 bg-white text-slate-900 hover:border-slate-400"
-                        }`}
-                      >
-                        <p className="text-sm font-semibold">Pay Online</p>
-                        <p
-                          className={`mt-1 text-xs ${
-                            paymentMethod === "online"
-                              ? "text-slate-200"
-                              : "text-slate-500"
-                          }`}
-                        >
-                          Secure online checkout with card payment.
+                        disabled
+                        className="cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-100 px-4 py-4 text-left"
+                    >
+                        <p className="text-sm font-semibold text-slate-400">
+                          Pay Online
                         </p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          Temporarily unavailable.
+                      </p>
                       </button>
 
                       <button
